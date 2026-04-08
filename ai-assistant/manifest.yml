@@ -1,0 +1,47 @@
+modules:
+  confluence:globalPage:
+    - key: ai-assistant-hello-world
+      resource: main
+      resolver:
+        function: resolver
+      title: ai-assistant
+      route: hello-world
+
+  jira:globalPage:
+    - key: ai-assistant-jira-global
+      resource: main
+      resolver:
+        function: resolver
+      title: ai-assistant
+      route: hello-world
+
+  function:
+    - key: resolver
+      handler: index.handler
+
+resources:
+  - key: main
+    path: static/hello-world/build
+
+permissions:
+  scopes:
+    - read:confluence-content.all
+    - write:confluence-content
+    - read:confluence-space.summary
+    - search:confluence
+    - read:jira-work
+    - write:jira-work
+    - read:jira-user
+  external:
+    fetch:
+      backend:
+        - "https://generativelanguage.googleapis.com"
+        - "https://api.groq.com"
+        - "https://*.devtunnels.ms"
+
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/0dcee5bc-b384-4f3f-afad-3ed2e611d3a0
