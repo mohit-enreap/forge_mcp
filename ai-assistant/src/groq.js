@@ -19,14 +19,16 @@ export async function callGroq(
 - For ANYTHING related to Confluence pages, spaces, documents, or content: ALWAYS use tools
 - NEVER output raw <function> tags — always use proper tool calls
 - If unsure whether something needs a tool, use the tool anyway
-- Understand natural language — "show me", "get me", "what are", "find", "display", "fetch", "give me" all mean "list"
+- Understand natural language and typos — "chnage", "chage", "cahnge" all mean "change"
 
 ## JIRA TOOLS:
 - see issues/tickets/tasks/bugs → search_jira_issues with appropriate JQL
-- open/unresolved work → JQL: resolution=Unresolved ORDER BY created DESC
-- completed/done work → JQL: status=Done ORDER BY created DESC
-- my work → JQL: assignee=currentUser() ORDER BY created DESC
-- all work → JQL: ORDER BY created DESC
+- todo/to-do/to do's → JQL: status="To Do" ORDER BY created DESC
+- in progress/ongoing/active → JQL: status="In Progress" ORDER BY created DESC
+- open/unresolved/pending/remaining → JQL: resolution=Unresolved ORDER BY created DESC
+- completed/done/finished/closed → JQL: status=Done ORDER BY created DESC
+- my work/assigned to me/my tasks/my issues → JQL: assignee=currentUser() ORDER BY created DESC
+- all work/everything/list all → JQL: ORDER BY created DESC
 - create ticket/issue/task/bug → create_jira_issue
 - change status → update_jira_issue
 - change priority → update_jira_priority (Lowest/Low/Medium/High/Highest/Critical)
@@ -37,25 +39,30 @@ export async function callGroq(
 - details of specific ticket → read_jira_issue
 
 ## CONFLUENCE TOOLS:
-- list/show/get all pages → list_confluence_pages (space_key optional)
+- list/show/get all pages → list_confluence_pages (space_key optional, pass nothing if listing all)
 - search pages by topic/keyword → search_confluence_pages
 - read/open/view/explain/describe specific page → read_confluence_page
 - see spaces/workspaces → list_confluence_spaces
 - create/write/draft/document new page → create_confluence_page
 - edit/update/change page CONTENT → update_confluence_page {title, content}
 - rename/change page TITLE/NAME → update_confluence_page {title: "current name", new_title: "new name"}
-- CRITICAL: "change name/title/rename" = use new_title field NOT content field
-- CRITICAL: "add content/update content" = use content field, keep title same
+- delete/remove page → delete_confluence_page {title}
+- CRITICAL: "delete", "remove", "trash" a page = delete_confluence_page NOT update
+- CRITICAL: "rename", "change name/title of" = new_title field in update_confluence_page
+- CRITICAL: "add/change/edit content" = content field in update_confluence_page
 
 ## NATURAL LANGUAGE MAPPINGS:
-- "remaining", "pending", "not done", "incomplete" → resolution=Unresolved
-- "finished", "completed", "closed" → status=Done
-- "my issues", "assigned to me", "my tasks" → assignee=currentUser()
+- "todo", "to do", "to-do", "todos", "to do's", "things to do" → status="To Do" ORDER BY created DESC
+- "in progress", "ongoing", "working on", "active" → status="In Progress" ORDER BY created DESC
+- "remaining", "pending", "not done", "incomplete", "open" → resolution=Unresolved ORDER BY created DESC
+- "finished", "completed", "closed" → status=Done ORDER BY created DESC
+- "my issues", "assigned to me", "my tasks", "my work" → assignee=currentUser() ORDER BY created DESC
 - "all issues", "everything", "list all" → ORDER BY created DESC
 - "pages", "docs", "documents", "content" → Confluence page tools
 - "space", "workspace" → list_confluence_spaces
 - "rename", "change name of", "change title of" → update_confluence_page with new_title
-- "edit content", "add content", "update content", "change content" → update_confluence_page with content`,
+- "delete", "remove", "trash" → delete_confluence_page
+- "edit content", "add content", "update content" → update_confluence_page with content`,
       },
       ...messages,
     ],

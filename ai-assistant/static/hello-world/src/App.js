@@ -2,7 +2,19 @@ import React, { useState, useRef, useEffect } from "react";
 import { invoke } from "@forge/bridge";
 import "./App.css";
 
-// ── Settings Form Component ──
+const SUGGESTIONS = [
+  { label: "📋 All Jira Issues", text: "List all my jira issues" },
+  { label: "🔓 Open Issues", text: "Show all open jira issues" },
+  { label: "✅ Done Issues", text: "Show all completed jira issues" },
+  { label: "👤 My Issues", text: "List issues assigned to me" },
+  { label: "📄 Confluence Pages", text: "List all confluence pages" },
+  { label: "🗂️ Confluence Spaces", text: "List all confluence spaces" },
+  { label: "👥 Team Members", text: "Show all users in my workspace" },
+  { label: "📁 Jira Projects", text: "List all jira projects" },
+  { label: "🚀 Create Task", text: "Create a new task titled " },
+  { label: "📝 Create Page", text: "Create a confluence page titled " },
+];
+
 function SettingsForm({ onSave, existing }) {
   const [baseUrl, setBaseUrl] = useState(existing?.baseUrl || "https://");
   const [email, setEmail] = useState(existing?.email || "");
@@ -30,11 +42,8 @@ function SettingsForm({ onSave, existing }) {
         email: email.trim(),
         token: token.trim(),
       });
-      if (result.success) {
-        onSave();
-      } else {
-        setError(result.error || "Failed to save.");
-      }
+      if (result.success) onSave();
+      else setError(result.error || "Failed to save.");
     } catch (e) {
       setError(e.message);
     } finally {
@@ -43,20 +52,19 @@ function SettingsForm({ onSave, existing }) {
   };
 
   return (
-    <div className="settings-overlay">
-      <div className="settings-card">
-        <div className="settings-header">
-          <div className="settings-icon">⚙️</div>
-          <div>
-            <div className="settings-title">Connect to Atlassian</div>
-            <div className="settings-sub">
-              Enter your credentials to get started
-            </div>
+    <div className="setup-screen">
+      <div className="setup-card">
+        <div className="setup-header">
+          <div className="setup-logo">
+            <span className="logo-icon">✦</span>
+            <span>AI Assistant</span>
           </div>
+          <p className="setup-subtitle">
+            Connect your Atlassian workspace to get started
+          </p>
         </div>
-
-        <div className="settings-body">
-          <div className="field">
+        <div className="setup-body">
+          <div className="field-group">
             <label>Atlassian Site URL</label>
             <input
               type="url"
@@ -64,39 +72,40 @@ function SettingsForm({ onSave, existing }) {
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://your-company.atlassian.net"
             />
-            <span className="hint">
-              Example: https://mohit-demo-enreap.atlassian.net
-            </span>
           </div>
-
-          <div className="field">
-            <label>Atlassian Email</label>
+          <div className="field-group">
+            <label>Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
             />
-            <span className="hint">Email used to log in to Atlassian</span>
           </div>
-
-          <div className="field">
-            <label>Atlassian API Token</label>
+          <div className="field-group">
+            <label>API Token</label>
             <input
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="Your API token"
+              placeholder="Your Atlassian API token"
             />
-            <span className="hint">
-              Get your token from id.atlassian.com - Security - API Tokens
+            <span className="field-hint">
+              Get token from{" "}
+              <strong>id.atlassian.com → Security → API Tokens</strong>
             </span>
           </div>
-
-          {error && <div className="settings-error">{error}</div>}
-
-          <button className="save-btn" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save and Connect"}
+          {error && <div className="setup-error">{error}</div>}
+          <button className="setup-btn" onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <>
+                <span className="btn-spinner" /> Connecting...
+              </>
+            ) : (
+              <>
+                <span>→</span> Connect Workspace
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -104,7 +113,45 @@ function SettingsForm({ onSave, existing }) {
   );
 }
 
-// ── Main App ──
+function Message({ msg, index }) {
+  const isUser = msg.role === "user";
+  return (
+    <div
+      className={`msg-row ${isUser ? "msg-user" : "msg-ai"}`}
+      style={{ animationDelay: `${index * 0.05}s` }}
+    >
+      {!isUser && (
+        <div className="msg-avatar ai-avatar">
+          <span>✦</span>
+        </div>
+      )}
+      <div className={`msg-bubble ${isUser ? "bubble-user" : "bubble-ai"}`}>
+        <p className="msg-text">{msg.content}</p>
+      </div>
+      {isUser && (
+        <div className="msg-avatar user-avatar">
+          <span>U</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TypingIndicator() {
+  return (
+    <div className="msg-row msg-ai">
+      <div className="msg-avatar ai-avatar">
+        <span>✦</span>
+      </div>
+      <div className="msg-bubble bubble-ai typing-bubble">
+        <span className="dot" />
+        <span className="dot" />
+        <span className="dot" />
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [configured, setConfigured] = useState(null);
   const [existingCreds, setExistingCreds] = useState({});
@@ -113,14 +160,15 @@ export default function App() {
     {
       role: "assistant",
       content:
-        "Hi! I am your AI Assistant. Ask me anything about Jira, Confluence, or general questions!",
+        "Hi! I'm your AI Assistant for Jira & Confluence. Ask me anything or tap a suggestion below ↓",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const bottomRef = useRef(null);
+  const inputRef = useRef(null);
 
-  // ── Check credentials on load ──
   useEffect(() => {
     invoke("getSettings")
       .then((result) => {
@@ -130,38 +178,37 @@ export default function App() {
       .catch(() => setConfigured(false));
   }, []);
 
-  // ── Auto scroll to bottom ──
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // ── After saving credentials ──
   const handleSaved = () => {
     setConfigured(true);
     setShowSettings(false);
     setMessages([
       {
         role: "assistant",
-        content:
-          "Connected! Ask me anything about Jira, Confluence, or general questions!",
+        content: "Connected! Ask me anything or tap a suggestion below ↓",
       },
     ]);
+    setShowSuggestions(true);
     invoke("getSettings").then((result) => {
       setExistingCreds({ baseUrl: result.baseUrl, email: result.email });
     });
   };
 
-  // ── Send message ──
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return;
-    const userMsg = { role: "user", content: input.trim() };
+  const sendMessage = async (text) => {
+    const msgText = (text || input).trim();
+    if (!msgText || loading) return;
+    setInput("");
+    setShowSuggestions(false);
+    const userMsg = { role: "user", content: msgText };
     const updated = [...messages, userMsg];
     setMessages(updated);
-    setInput("");
     setLoading(true);
     try {
       const result = await invoke("chat", {
-        message: input.trim(),
+        message: msgText,
         history: messages.filter((m) => m.role !== "system"),
       });
       const responseText = result?.text || result?.reply || "No response.";
@@ -179,7 +226,11 @@ export default function App() {
     }
   };
 
-  // ── Enter key handler ──
+  const handleSuggestion = (suggestion) => {
+    setInput(suggestion.text);
+    inputRef.current?.focus();
+  };
+
   const handleKey = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -187,8 +238,7 @@ export default function App() {
     }
   };
 
-  // ── Clear credentials ──
-  const handleClearSettings = async () => {
+  const handleClear = async () => {
     await invoke("clearSettings");
     setConfigured(false);
     setShowSettings(false);
@@ -196,106 +246,131 @@ export default function App() {
       {
         role: "assistant",
         content:
-          "Hi! I am your AI Assistant. Ask me anything about Jira, Confluence, or general questions!",
+          "Hi! I'm your AI Assistant for Jira & Confluence. Ask me anything or tap a suggestion below ↓",
       },
     ]);
+    setShowSuggestions(true);
   };
 
-  // ── Loading screen ──
   if (configured === null) {
     return (
-      <div className="app center">
-        <div className="spinner" />
-        <p>Loading...</p>
+      <div className="loading-screen">
+        <div className="loading-logo">✦</div>
+        <div className="loading-bar">
+          <div className="loading-fill" />
+        </div>
       </div>
     );
   }
 
-  // ── Not configured — show settings form ──
   if (!configured) {
     return <SettingsForm onSave={handleSaved} existing={existingCreds} />;
   }
 
-  // ── Main chat UI ──
   return (
     <div className="app">
-      <div className="header">
-        <div className="header-logo">AI</div>
-        <div style={{ flex: 1 }}>
-          <div className="header-title">AI Assistant</div>
-          <div className="header-sub">Powered by Groq - Jira + Confluence</div>
+      {/* Header */}
+      <div className="app-header">
+        <div className="header-left">
+          <div className="header-logo">✦</div>
+          <div>
+            <div className="header-title">AI Assistant</div>
+            <div className="header-sub">
+              Jira + Confluence · Powered by Groq
+            </div>
+          </div>
         </div>
         <button
-          className="settings-btn"
+          className="header-settings"
           onClick={() => setShowSettings(true)}
           title="Settings"
         >
-          ⚙️
+          ⚙
         </button>
       </div>
 
+      {/* Settings Modal */}
       {showSettings && (
         <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <span>Update Credentials</span>
+            <div className="modal-top">
+              <span className="modal-title">Update Credentials</span>
               <button
-                className="close-btn"
+                className="modal-close"
                 onClick={() => setShowSettings(false)}
               >
-                X
+                ✕
               </button>
             </div>
             <SettingsForm onSave={handleSaved} existing={existingCreds} />
-            <button className="clear-btn" onClick={handleClearSettings}>
-              Clear and Reset All Credentials
+            <button className="danger-btn" onClick={handleClear}>
+              🗑 Clear & Reset All Credentials
             </button>
           </div>
         </div>
       )}
 
-      <div className="messages">
-        {messages.map((msg, i) => (
-          <div key={i} className={"row " + msg.role}>
-            <div className="avatar">{msg.role === "user" ? "U" : "AI"}</div>
-            <div className="bubble">
-              <div className="bubble-name">
-                {msg.role === "user" ? "You" : "Assistant"}
-              </div>
-              <div className="bubble-text">{msg.content}</div>
-            </div>
-          </div>
-        ))}
-
-        {loading && (
-          <div className="row assistant">
-            <div className="avatar">AI</div>
-            <div className="bubble">
-              <div className="bubble-name">Assistant</div>
-              <div className="typing">
-                <span />
-                <span />
-                <span />
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div ref={bottomRef} />
+      {/* Messages */}
+      <div className="messages-area">
+        <div className="messages-inner">
+          {messages.map((msg, i) => (
+            <Message key={i} msg={msg} index={i} />
+          ))}
+          {loading && <TypingIndicator />}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      <div className="input-bar">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="Ask anything... Jira, Confluence, or general (Enter to send)"
-          rows={2}
-          disabled={loading}
-        />
-        <button onClick={sendMessage} disabled={loading || !input.trim()}>
-          {loading ? "..." : "Send"}
-        </button>
+      {/* Suggestions */}
+      {showSuggestions && (
+        <div className="suggestions-bar">
+          <div className="suggestions-label">Quick actions</div>
+          <div className="suggestions-scroll">
+            {SUGGESTIONS.map((s, i) => (
+              <button
+                key={i}
+                className="suggestion-chip"
+                onClick={() => handleSuggestion(s)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input Bar */}
+      <div className="input-area">
+        {!showSuggestions && (
+          <button
+            className="toggle-suggestions"
+            onClick={() => setShowSuggestions(true)}
+            title="Show suggestions"
+          >
+            💡
+          </button>
+        )}
+        <div className="input-wrapper">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Ask anything about Jira or Confluence..."
+            rows={1}
+            disabled={loading}
+          />
+          <button
+            className={`send-btn ${input.trim() && !loading ? "send-active" : ""}`}
+            onClick={() => sendMessage()}
+            disabled={loading || !input.trim()}
+          >
+            {loading ? <span className="send-spinner" /> : "↑"}
+          </button>
+        </div>
+        <div className="input-hint">
+          Enter to send · Shift+Enter for new line
+        </div>
       </div>
     </div>
   );
