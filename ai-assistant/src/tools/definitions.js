@@ -136,7 +136,7 @@ export const ALL_TOOLS = [
   {
     name: "list_confluence_pages",
     description:
-      "List all pages in a Confluence space. Use when asked to list pages, docs or content in a space.",
+      "List all pages in a Confluence space. Use when asked to list pages, docs or content.",
     inputSchema: {
       type: "object",
       properties: {
@@ -178,6 +178,31 @@ export const ALL_TOOLS = [
         },
       },
       required: ["title", "content"],
+    },
+  },
+  {
+    name: "update_confluence_page",
+    description:
+      "Edit, update or rename an existing Confluence page. Can change title, content or both. Use new_title to rename, content to update body.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description: "Current exact title of the page to update",
+        },
+        content: {
+          type: "string",
+          description:
+            "New content to replace page body (optional, keeps existing if not provided)",
+        },
+        new_title: {
+          type: "string",
+          description:
+            "New title to rename the page to (optional, keeps existing if not provided)",
+        },
+      },
+      required: ["title"],
     },
   },
 ];

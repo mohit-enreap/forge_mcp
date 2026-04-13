@@ -16,6 +16,7 @@ import {
   confluenceReadPage,
   confluenceListSpaces,
   confluenceCreatePage,
+  confluenceUpdatePage,
 } from "./confluence.js";
 
 export async function executeTool(name, args, creds) {
@@ -70,7 +71,12 @@ export async function executeTool(name, args, creds) {
     case "list_confluence_pages":
       return confluenceListPages(args.space_key, baseUrl, email, token);
     case "read_confluence_page":
-      return confluenceReadPage(args.title, baseUrl, email, token);
+      return confluenceReadPage(
+        args.title || args.page_title,
+        baseUrl,
+        email,
+        token,
+      );
     case "list_confluence_spaces":
       return confluenceListSpaces(baseUrl, email, token);
     case "create_confluence_page":
@@ -78,6 +84,15 @@ export async function executeTool(name, args, creds) {
         args.title,
         args.content,
         null,
+        baseUrl,
+        email,
+        token,
+      );
+    case "update_confluence_page":
+      return confluenceUpdatePage(
+        args.title,
+        args.content,
+        args.new_title,
         baseUrl,
         email,
         token,

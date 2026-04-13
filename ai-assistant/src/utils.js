@@ -33,6 +33,9 @@ export function needsTools(message) {
     msg.includes("done") ||
     msg.includes("progress") ||
     msg.includes("kan-") ||
+    msg.includes("ai-") ||
+    msg.includes("described") ||
+    msg.includes("describe") ||
     msg.includes("user") ||
     msg.includes("member") ||
     msg.includes("people") ||
@@ -41,26 +44,77 @@ export function needsTools(message) {
     msg.includes("write") ||
     msg.includes("document") ||
     msg.includes("documentation") ||
-    msg.includes("content")
+    msg.includes("content") ||
+    msg.includes("read") ||
+    msg.includes("view") ||
+    msg.includes("get") ||
+    msg.includes("fetch") ||
+    msg.includes("display") ||
+    msg.includes("edit") ||
+    msg.includes("mcp-") ||
+    msg.includes("tell me about")
   );
 }
 
 export function selectRelevantTools(message) {
   const msg = message.toLowerCase();
 
+  const hasConfluenceKeyword =
+    msg.includes("confluence") ||
+    msg.includes("page") ||
+    msg.includes("doc") ||
+    msg.includes("space") ||
+    msg.includes("document") ||
+    msg.includes("write") ||
+    msg.includes("documentation") ||
+    msg.includes("content");
+
+  const hasJiraKeyword =
+    msg.includes("jira") ||
+    msg.includes("issue") ||
+    msg.includes("ticket") ||
+    msg.includes("bug") ||
+    msg.includes("sprint") ||
+    msg.includes("backlog") ||
+    msg.includes("kan-") ||
+    msg.includes("ai-") ||
+    msg.includes("mcp-");
+
+  // Detect read/explain/open/edit intent for a named page
+  const isReadIntent =
+    msg.startsWith("open ") ||
+    msg.startsWith("read ") ||
+    msg.startsWith("describe ") ||
+    msg.startsWith("described ") ||
+    msg.startsWith("show me ") ||
+    msg.startsWith("tell me about ") ||
+    msg.startsWith("what is ") ||
+    msg.startsWith("explain ") ||
+    msg.startsWith("view ") ||
+    msg.startsWith("fetch ") ||
+    msg.startsWith("edit ") ||
+    msg.startsWith("update ") ||
+    msg.includes("describe ") ||
+    msg.includes("described ") ||
+    msg.includes("edit ") ||
+    msg.includes("modify ");
+
+  // If read/edit intent and no Jira keyword → treat as Confluence
+  if (isReadIntent && !hasJiraKeyword) {
+    return ALL_TOOLS.filter((t) =>
+      [
+        "read_confluence_page",
+        "search_confluence_pages",
+        "list_confluence_pages",
+        "list_confluence_spaces",
+        "update_confluence_page",
+      ].includes(t.name),
+    );
+  }
+
   const isConfluenceOnly =
-    (msg.includes("confluence") ||
-      msg.includes("page") ||
-      msg.includes("doc") ||
-      msg.includes("space") ||
-      msg.includes("document") ||
-      msg.includes("write") ||
-      msg.includes("documentation") ||
-      msg.includes("content")) &&
-    !msg.includes("jira") &&
-    !msg.includes("issue") &&
-    !msg.includes("ticket") &&
-    !msg.includes("bug") &&
+    hasConfluenceKeyword &&
+    !hasJiraKeyword &&
     !msg.includes("user") &&
     !msg.includes("member");
 
@@ -75,30 +129,21 @@ export function selectRelevantTools(message) {
     !msg.includes("ticket");
 
   const isJira =
-    msg.includes("jira") ||
+    hasJiraKeyword ||
     msg.includes("issue") ||
     msg.includes("ticket") ||
-    msg.includes("bug") ||
     msg.includes("task") ||
-    msg.includes("sprint") ||
     msg.includes("list") ||
     msg.includes("show") ||
     msg.includes("create") ||
-    msg.includes("open") ||
     msg.includes("assign") ||
     msg.includes("reassign") ||
     msg.includes("project") ||
     msg.includes("comment") ||
     msg.includes("status") ||
     msg.includes("priority") ||
-    msg.includes("update") ||
-    msg.includes("change") ||
-    msg.includes("move") ||
-    msg.includes("explain") ||
-    msg.includes("detail") ||
     msg.includes("done") ||
     msg.includes("progress") ||
-    msg.includes("kan-") ||
     msg.includes("user") ||
     msg.includes("member") ||
     msg.includes("people");
@@ -111,6 +156,7 @@ export function selectRelevantTools(message) {
         "read_confluence_page",
         "list_confluence_spaces",
         "create_confluence_page",
+        "update_confluence_page",
       ].includes(t.name),
     );
 
@@ -132,7 +178,8 @@ export function selectRelevantTools(message) {
       ].includes(t.name),
     );
 
-  return [];
+  // Fallback — give all tools
+  return ALL_TOOLS;
 }
 
 export function toGroqFormat(tools) {
@@ -193,10 +240,16 @@ export function formatToolResult(toolName, resultText) {
 
     if (toolName === "list_confluence_pages") {
       if (!data.pages?.length) return "No pages found.";
-      const lines = data.pages.map(
-        (p, i) => `${i + 1}. ${p.title} — Space: ${p.space}`,
+      const grouped = {};
+      data.pages.forEach((p) => {
+        if (!grouped[p.space]) grouped[p.space] = [];
+        grouped[p.space].push(p.title);
+      });
+      const lines = Object.entries(grouped).map(
+        ([space, pages]) =>
+          `📁 ${space}:\n${pages.map((t, i) => `   ${i + 1}. ${t}`).join("\n")}`,
       );
-      return `Found ${data.total} page(s) in space ${data.space}:\n\n${lines.join("\n")}`;
+      return `Found ${data.total} page(s) across all spaces:\n\n${lines.join("\n\n")}`;
     }
 
     if (toolName === "list_confluence_spaces") {
