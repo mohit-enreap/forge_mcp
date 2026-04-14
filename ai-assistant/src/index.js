@@ -1,4 +1,5 @@
 import Resolver from "@forge/resolver";
+import { kvs } from "@forge/kvs";
 import { getCredentials, registerSettingsResolvers } from "./credentials.js";
 import { executeTool } from "./tools/executor.js";
 import { callGroq } from "./groq.js";
@@ -13,10 +14,117 @@ import {
 
 const resolver = new Resolver();
 
-// Register settings resolvers (save/get/clear credentials)
+// Register settings resolvers
 registerSettingsResolvers(resolver);
 
-// Main chat resolver
+// ── Chat History: List all chats ──
+resolver.define("listChats", async () => {
+  try {
+    const index = (await kvs.get("chats_index")) || [];
+    // Sort by most recent first
+    const sorted = index.sort((a, b) => b.createdAt - a.createdAt);
+    return { success: true, chats: sorted };
+  } catch (err) {
+    console.error("listChats error:", err.message);
+    return { success: false, chats: [] };
+  }
+});
+
+// ── Chat History: Load one full chat ──
+resolver.define("loadChat", async (req) => {
+  const { chatId } = req.payload;
+  try {
+    const chat = await kvs.get(`chat_${chatId}`);
+    if (!chat) return { success: false, chat: null };
+    return { success: true, chat };
+  } catch (err) {
+    console.error("loadChat error:", err.message);
+    return { success: false, chat: null };
+  }
+});
+
+// ── Chat History: Save or update a chat ──
+resolver.define("saveChat", async (req) => {
+  const { chatId, title, messages } = req.payload;
+  try {
+    const now = Date.now();
+
+    // Save full chat
+    const existing = await kvs.get(`chat_${chatId}`);
+    const chat = {
+      id: chatId,
+      title: title || "New Chat",
+      messages: messages || [],
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+    };
+    await kvs.set(`chat_${chatId}`, chat);
+
+    // Update index
+    let index = (await kvs.get("chats_index")) || [];
+    const existingIndex = index.findIndex((c) => c.id === chatId);
+
+    if (existingIndex >= 0) {
+      index[existingIndex] = {
+        id: chatId,
+        title: chat.title,
+        createdAt: chat.createdAt,
+        updatedAt: now,
+      };
+    } else {
+      index.unshift({
+        id: chatId,
+        title: chat.title,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    // Keep max 100 chats
+    if (index.length > 100) index = index.slice(0, 100);
+    await kvs.set("chats_index", index);
+
+    return { success: true };
+  } catch (err) {
+    console.error("saveChat error:", err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+// ── Chat History: Delete a chat ──
+resolver.define("deleteChat", async (req) => {
+  const { chatId } = req.payload;
+  try {
+    // Delete full chat
+    await kvs.delete(`chat_${chatId}`);
+
+    // Remove from index
+    const index = (await kvs.get("chats_index")) || [];
+    const updated = index.filter((c) => c.id !== chatId);
+    await kvs.set("chats_index", updated);
+
+    return { success: true };
+  } catch (err) {
+    console.error("deleteChat error:", err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+// ── Chat History: Clear all chats ──
+resolver.define("clearAllChats", async () => {
+  try {
+    const index = (await kvs.get("chats_index")) || [];
+    for (const chat of index) {
+      await kvs.delete(`chat_${chat.id}`);
+    }
+    await kvs.set("chats_index", []);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ── Main chat resolver ──
 resolver.define("chat", async (req) => {
   const { message, history } = req.payload;
   const apiKey = process.env.GROQ_API_KEY;
@@ -58,7 +166,6 @@ resolver.define("chat", async (req) => {
 
     console.log("Finish reason:", finishReason);
 
-    // Case 1: Proper tool call
     if (finishReason === "tool_calls" && responseMessage?.tool_calls) {
       const toolCall = responseMessage.tool_calls[0];
       const toolName = toolCall.function.name;
@@ -70,7 +177,6 @@ resolver.define("chat", async (req) => {
 
     const rawText = responseMessage?.content || "";
 
-    // Case 2: Tool call as text (fallback)
     if (rawText.includes("<function") && groqTools.length > 0) {
       const parsed = parseToolCallFromText(rawText);
       if (parsed) {
@@ -83,9 +189,7 @@ resolver.define("chat", async (req) => {
       }
     }
 
-    // Case 3: Normal text response
     if (rawText) return { error: false, text: rawText };
-
     return { error: true, text: "Empty response received." };
   } catch (err) {
     console.error("Chat error:", err.message);

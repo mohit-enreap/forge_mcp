@@ -1,12 +1,11 @@
 import api from "@forge/api";
 import { buildHeaders } from "../credentials.js";
 
-// Search Issues
+// ── Search Issues ──
 export async function jiraSearch(jql, baseUrl, email, token) {
   try {
     let cleanJql = jql?.trim();
 
-    // Replace currentUser() with actual email — Basic Auth doesn't support it
     if (cleanJql) {
       cleanJql = cleanJql.replace(/currentUser\(\)/gi, `"${email}"`);
     }
@@ -80,7 +79,7 @@ export async function jiraSearch(jql, baseUrl, email, token) {
   }
 }
 
-// Create Issue
+// ── Create Issue ──
 export async function jiraCreate(args, baseUrl, email, token) {
   try {
     let projectKey = args.project_key;
@@ -142,7 +141,7 @@ export async function jiraCreate(args, baseUrl, email, token) {
   }
 }
 
-// Read Issue
+// ── Read Issue ──
 export async function jiraReadIssue(issueKey, baseUrl, email, token) {
   try {
     const res = await api.fetch(
@@ -183,7 +182,7 @@ export async function jiraReadIssue(issueKey, baseUrl, email, token) {
   }
 }
 
-// Update Status
+// ── Update Status ──
 export async function jiraUpdateStatus(
   issueKey,
   statusName,
@@ -197,6 +196,7 @@ export async function jiraUpdateStatus(
       { headers: buildHeaders(email, token) },
     );
     const transData = await transRes.json();
+
     const transition = transData.transitions?.find(
       (t) =>
         t.name.toLowerCase().includes(statusName.toLowerCase()) ||
@@ -234,7 +234,7 @@ export async function jiraUpdateStatus(
   }
 }
 
-// Update Priority
+// ── Update Priority ──
 export async function jiraUpdatePriority(
   issueKey,
   priorityName,
@@ -267,7 +267,42 @@ export async function jiraUpdatePriority(
   }
 }
 
-// List Users
+// ── Update Summary/Title ──
+export async function jiraUpdateSummary(
+  issueKey,
+  newSummary,
+  baseUrl,
+  email,
+  token,
+) {
+  try {
+    const res = await api.fetch(`${baseUrl}/rest/api/3/issue/${issueKey}`, {
+      method: "PUT",
+      headers: buildHeaders(email, token),
+      body: JSON.stringify({
+        fields: { summary: newSummary },
+      }),
+    });
+    if (res.status === 204) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Successfully updated ${issueKey} title to "${newSummary}"`,
+          },
+        ],
+      };
+    }
+    const data = await res.json();
+    return {
+      content: [{ type: "text", text: `Error: ${JSON.stringify(data)}` }],
+    };
+  } catch (err) {
+    return { content: [{ type: "text", text: `Error: ${err.message}` }] };
+  }
+}
+
+// ── List Users ──
 export async function jiraListUsers(baseUrl, email, token) {
   try {
     const res = await api.fetch(
@@ -300,7 +335,7 @@ export async function jiraListUsers(baseUrl, email, token) {
   }
 }
 
-// Assign Issue
+// ── Assign Issue ──
 export async function jiraAssignIssue(
   issueKey,
   userName,
@@ -311,7 +346,6 @@ export async function jiraAssignIssue(
   try {
     let user = null;
 
-    // Strategy 1 — exact name search
     const s1 = await api.fetch(
       `${baseUrl}/rest/api/3/user/search?query=${encodeURIComponent(userName)}&maxResults=10`,
       { headers: buildHeaders(email, token) },
@@ -324,7 +358,6 @@ export async function jiraAssignIssue(
         ) || null;
     }
 
-    // Strategy 2 — first name search
     if (!user) {
       const s2 = await api.fetch(
         `${baseUrl}/rest/api/3/user/search?query=${encodeURIComponent(userName.split(" ")[0])}&maxResults=10`,
@@ -339,7 +372,6 @@ export async function jiraAssignIssue(
       }
     }
 
-    // Strategy 3 — list all users
     if (!user) {
       const s3 = await api.fetch(
         `${baseUrl}/rest/api/3/users/search?maxResults=50`,
@@ -407,7 +439,7 @@ export async function jiraAssignIssue(
   }
 }
 
-// List Projects
+// ── List Projects ──
 export async function jiraListProjects(baseUrl, email, token) {
   try {
     const res = await api.fetch(`${baseUrl}/rest/api/3/project`, {
@@ -423,7 +455,7 @@ export async function jiraListProjects(baseUrl, email, token) {
   }
 }
 
-// Add Comment
+// ── Add Comment ──
 export async function jiraAddComment(issueKey, comment, baseUrl, email, token) {
   try {
     await api.fetch(`${baseUrl}/rest/api/3/issue/${issueKey}/comment`, {

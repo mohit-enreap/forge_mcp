@@ -4,6 +4,7 @@ import {
   jiraReadIssue,
   jiraUpdateStatus,
   jiraUpdatePriority,
+  jiraUpdateSummary,
   jiraAssignIssue,
   jiraListUsers,
   jiraListProjects,
@@ -22,10 +23,7 @@ import {
 
 export async function executeTool(name, args, creds) {
   const { baseUrl, email, token } = creds;
-
-  // ✅ Always default args to empty object to prevent null crashes
   const a = args || {};
-
   console.log("Executing tool:", name, JSON.stringify(a));
 
   switch (name) {
@@ -39,6 +37,8 @@ export async function executeTool(name, args, creds) {
       return jiraUpdateStatus(a.issue_key, a.status, baseUrl, email, token);
     case "update_jira_priority":
       return jiraUpdatePriority(a.issue_key, a.priority, baseUrl, email, token);
+    case "update_jira_summary":
+      return jiraUpdateSummary(a.issue_key, a.summary, baseUrl, email, token);
     case "assign_jira_issue":
       return jiraAssignIssue(a.issue_key, a.user_name, baseUrl, email, token);
     case "list_jira_users":

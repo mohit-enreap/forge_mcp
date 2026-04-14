@@ -53,7 +53,7 @@ export const ALL_TOOLS = [
   {
     name: "update_jira_issue",
     description:
-      "Update or change the status of a Jira issue e.g. In Progress, Done, To Do",
+      "Update or change the STATUS of a Jira issue e.g. In Progress, Done, To Do. Only for status changes.",
     inputSchema: {
       type: "object",
       properties: {
@@ -71,7 +71,8 @@ export const ALL_TOOLS = [
   },
   {
     name: "update_jira_priority",
-    description: "Update or change the priority of a Jira issue",
+    description:
+      "Update or change the PRIORITY of a Jira issue. Only for priority changes.",
     inputSchema: {
       type: "object",
       properties: {
@@ -82,6 +83,22 @@ export const ALL_TOOLS = [
         },
       },
       required: ["issue_key", "priority"],
+    },
+  },
+  {
+    name: "update_jira_summary",
+    description:
+      "Update or rename the TITLE or SUMMARY of a Jira issue. Use when user says change title, rename issue, update name, change summary.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        issue_key: { type: "string", description: "Jira issue key e.g. AI-1" },
+        summary: {
+          type: "string",
+          description: "New title or summary for the issue",
+        },
+      },
+      required: ["issue_key", "summary"],
     },
   },
   {
@@ -183,7 +200,7 @@ export const ALL_TOOLS = [
   {
     name: "update_confluence_page",
     description:
-      "Edit, update or rename an existing Confluence page. Can change title, content or both. Use new_title to rename, content to update body.",
+      "Edit, update or rename an existing Confluence page. Use new_title to rename, content to update body.",
     inputSchema: {
       type: "object",
       properties: {
@@ -193,13 +210,25 @@ export const ALL_TOOLS = [
         },
         content: {
           type: "string",
-          description:
-            "New content to replace page body (optional, keeps existing if not provided)",
+          description: "New content (optional, keeps existing if not provided)",
         },
         new_title: {
           type: "string",
-          description:
-            "New title to rename the page to (optional, keeps existing if not provided)",
+          description: "New title to rename the page to (optional)",
+        },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "delete_confluence_page",
+    description: "Delete or remove a Confluence page permanently by its title.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description: "Exact title of the page to delete",
         },
       },
       required: ["title"],

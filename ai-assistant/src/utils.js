@@ -27,6 +27,9 @@ export function needsTools(message) {
     msg.includes("priority") ||
     msg.includes("update") ||
     msg.includes("change") ||
+    msg.includes("chnage") ||
+    msg.includes("chage") ||
+    msg.includes("cahnge") ||
     msg.includes("move") ||
     msg.includes("explain") ||
     msg.includes("detail") ||
@@ -34,6 +37,7 @@ export function needsTools(message) {
     msg.includes("progress") ||
     msg.includes("kan-") ||
     msg.includes("ai-") ||
+    msg.includes("mcp-") ||
     msg.includes("described") ||
     msg.includes("describe") ||
     msg.includes("user") ||
@@ -51,7 +55,12 @@ export function needsTools(message) {
     msg.includes("fetch") ||
     msg.includes("display") ||
     msg.includes("edit") ||
-    msg.includes("mcp-") ||
+    msg.includes("delete") ||
+    msg.includes("remove") ||
+    msg.includes("rename") ||
+    msg.includes("title") ||
+    msg.includes("summary") ||
+    msg.includes("name") ||
     msg.includes("tell me about")
   );
 }
@@ -80,7 +89,6 @@ export function selectRelevantTools(message) {
     msg.includes("ai-") ||
     msg.includes("mcp-");
 
-  // Detect read/explain/open/edit intent for a named page
   const isReadIntent =
     msg.startsWith("open ") ||
     msg.startsWith("read ") ||
@@ -91,15 +99,19 @@ export function selectRelevantTools(message) {
     msg.startsWith("what is ") ||
     msg.startsWith("explain ") ||
     msg.startsWith("view ") ||
-    msg.startsWith("fetch ") ||
     msg.startsWith("edit ") ||
     msg.startsWith("update ") ||
+    msg.startsWith("delete ") ||
+    msg.startsWith("remove ") ||
+    msg.startsWith("rename ") ||
+    msg.startsWith("change ") ||
+    msg.startsWith("chnage ") ||
     msg.includes("describe ") ||
-    msg.includes("described ") ||
     msg.includes("edit ") ||
-    msg.includes("modify ");
+    msg.includes("delete ") ||
+    msg.includes("remove ") ||
+    msg.includes("rename ");
 
-  // If read/edit intent and no Jira keyword → treat as Confluence
   if (isReadIntent && !hasJiraKeyword) {
     return ALL_TOOLS.filter((t) =>
       [
@@ -108,6 +120,7 @@ export function selectRelevantTools(message) {
         "list_confluence_pages",
         "list_confluence_spaces",
         "update_confluence_page",
+        "delete_confluence_page",
       ].includes(t.name),
     );
   }
@@ -142,6 +155,11 @@ export function selectRelevantTools(message) {
     msg.includes("comment") ||
     msg.includes("status") ||
     msg.includes("priority") ||
+    msg.includes("update") ||
+    msg.includes("change") ||
+    msg.includes("title") ||
+    msg.includes("summary") ||
+    msg.includes("rename") ||
     msg.includes("done") ||
     msg.includes("progress") ||
     msg.includes("user") ||
@@ -157,6 +175,7 @@ export function selectRelevantTools(message) {
         "list_confluence_spaces",
         "create_confluence_page",
         "update_confluence_page",
+        "delete_confluence_page",
       ].includes(t.name),
     );
 
@@ -171,6 +190,7 @@ export function selectRelevantTools(message) {
         "read_jira_issue",
         "update_jira_issue",
         "update_jira_priority",
+        "update_jira_summary",
         "assign_jira_issue",
         "list_jira_users",
         "list_jira_projects",
@@ -178,7 +198,6 @@ export function selectRelevantTools(message) {
       ].includes(t.name),
     );
 
-  // Fallback — give all tools
   return ALL_TOOLS;
 }
 
@@ -249,7 +268,7 @@ export function formatToolResult(toolName, resultText) {
         ([space, pages]) =>
           `📁 ${space}:\n${pages.map((t, i) => `   ${i + 1}. ${t}`).join("\n")}`,
       );
-      return `Found ${data.total} page(s) across all spaces:\n\n${lines.join("\n\n")}`;
+      return `Found ${data.total} page(s):\n\n${lines.join("\n\n")}`;
     }
 
     if (toolName === "list_confluence_spaces") {
