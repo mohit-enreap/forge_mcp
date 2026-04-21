@@ -23,8 +23,17 @@ resources:
   - key: main
     path: static/hello-world/build
 
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/4b0a6644-7f48-407e-b539-d9becc60ec6f
+
 permissions:
   scopes:
+    - read:space:confluence
+    - storage:app
     - read:confluence-content.all
     - write:confluence-content
     - read:confluence-space.summary
@@ -35,13 +44,5 @@ permissions:
   external:
     fetch:
       backend:
-        - "https://generativelanguage.googleapis.com"
-        - "https://api.groq.com"
-        - "https://*.devtunnels.ms"
-
-app:
-  runtime:
-    name: nodejs24.x
-    memoryMB: 256
-    architecture: arm64
-  id: ari:cloud:ecosystem::app/0dcee5bc-b384-4f3f-afad-3ed2e611d3a0
+        - address: https://api.groq.com
+        - address: https://*.atlassian.net
